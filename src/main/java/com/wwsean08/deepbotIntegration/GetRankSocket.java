@@ -65,9 +65,12 @@ public class GetRankSocket
     {
         Gson gson = new Gson();
         DeepbotBaseReponse deepbotResponse = gson.fromJson(msg, DeepbotBaseReponse.class);
-        user.setRank(deepbotResponse.getMessage());
-        session.close();
-        this.closeLatch.countDown();
+        if (!deepbotResponse.getMessage().equals("success"))
+        {
+            user.setRank(deepbotResponse.getMessage());
+            session.close();
+            this.closeLatch.countDown();
+        }
     }
 
     @OnWebSocketError
