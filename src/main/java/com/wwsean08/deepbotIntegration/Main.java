@@ -12,7 +12,6 @@ import org.apache.http.impl.client.DefaultHttpClient;
 import org.eclipse.jetty.websocket.client.ClientUpgradeRequest;
 import org.eclipse.jetty.websocket.client.WebSocketClient;
 
-import java.io.StringBufferInputStream;
 import java.net.URI;
 import java.util.List;
 import java.util.concurrent.TimeUnit;
@@ -25,36 +24,61 @@ public class Main
     public static void main(String[] args) throws Exception
     {
         long startTime = System.currentTimeMillis();
+        int totalUsers = -1;
         String destUri = "ws://10.0.0.10:3337";
-        WebSocketClient client = new WebSocketClient();
-        GetUsersSocket socket = new GetUsersSocket();
         URI echoURI = new URI(destUri);
 
+        WebSocketClient userCountClient = new WebSocketClient();
+        GetUserCountSocket getUserCountSocket = new GetUserCountSocket();
         try
         {
-            client.start();
+            userCountClient.start();
             ClientUpgradeRequest request = new ClientUpgradeRequest();
-            client.connect(socket, echoURI, request);
-            socket.awaitClose(10, TimeUnit.SECONDS);
+            userCountClient.connect(getUserCountSocket, echoURI, request);
+            getUserCountSocket.awaitClose(4, TimeUnit.SECONDS);
+            totalUsers = getUserCountSocket.getUserCount();
+            userCountClient.stop();
+            if(totalUsers != -1)
+            {
+                System.out.println("There are " + totalUsers + " according to deepbot.");
+            }
+            else
+            {
+                System.err.println("An error occurred and we didn't get a user count from deepbot.");
+            }
         }
         catch (Exception e)
         {
             e.printStackTrace();
         }
 
-        List<User> userList = socket.getUserList();
+        WebSocketClient userClient = new WebSocketClient();
+        GetUsersSocket getUsersSocket = new GetUsersSocket(totalUsers);
+        try
+        {
+            userClient.start();
+            ClientUpgradeRequest request = new ClientUpgradeRequest();
+            userClient.connect(getUsersSocket, echoURI, request);
+            getUsersSocket.awaitClose(10, TimeUnit.SECONDS);
+        }
+        catch (Exception e)
+        {
+            e.printStackTrace();
+        }
+
+        List<User> userList = getUsersSocket.getUserList();
         WebSocketClient rankClient = new WebSocketClient();
         rankClient.start();
         for (User user : userList)
         {
-            GetRankSocket rankSocket = new GetRankSocket(user);
+            GetRankSocket rgetRankSocketnkSocket = new GetRankSocket(user);
             ClientUpgradeRequest request = new ClientUpgradeRequest();
-            rankClient.connect(rankSocket, echoURI, request);
-            rankSocket.awaitClose(5, TimeUnit.SECONDS);
+            rankClient.connect(rgetRankSocketnkSocket, echoURI, request);
+            rgetRankSocketnkSocket.awaitClose(5, TimeUnit.SECONDS);
         }
         Gson gson = new Gson();
         String body = gson.toJson(userList);
-        client.stop();
+        userClient.stop();
         rankClient.stop();
 
         System.out.println("Sending data to database");

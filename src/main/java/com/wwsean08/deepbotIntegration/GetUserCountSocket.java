@@ -1,42 +1,30 @@
 package com.wwsean08.deepbotIntegration;
 
-import java.util.ArrayList;
-import java.util.List;
+import com.google.gson.Gson;
+import com.wwsean08.deepbotIntegration.pojo.DeepbotBaseReponse;
+import org.eclipse.jetty.websocket.api.Session;
+import org.eclipse.jetty.websocket.api.annotations.*;
+
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.Future;
 import java.util.concurrent.TimeUnit;
 
-import com.google.gson.Gson;
-import com.google.gson.JsonSyntaxException;
-import com.wwsean08.deepbotIntegration.pojo.DeepBotUserResponse;
-import com.wwsean08.deepbotIntegration.pojo.DeepbotBaseReponse;
-import com.wwsean08.deepbotIntegration.pojo.User;
-import org.eclipse.jetty.websocket.api.Session;
-import org.eclipse.jetty.websocket.api.annotations.*;
-
 /**
- * Basic Echo Client Socket
+ * Created by sean on 5/6/16.
  */
 @WebSocket(maxTextMessageSize = 64 * 1024)
-public class GetUsersSocket
+public class GetUserCountSocket
 {
-
     private final CountDownLatch closeLatch;
 
-    private boolean endLoop = false;
-
-    private final List<User> userList;
-
-    private final int totalUsers;
+    private int totalUsers = -1;
 
     @SuppressWarnings("unused")
     private Session session;
 
-    public GetUsersSocket(int totalUsers)
+    public GetUserCountSocket()
     {
         this.closeLatch = new CountDownLatch(1);
-        this.userList = new ArrayList<>();
-        this.totalUsers = totalUsers;
     }
 
     public boolean awaitClose(int duration, TimeUnit unit) throws InterruptedException
@@ -61,16 +49,10 @@ public class GetUsersSocket
         {
             Future<Void> fut;
             fut = session.getRemote().sendStringByFuture("api|register|7C8A5OPLHDAaISRCVeMRcAPRFPXLBAJULRfCJ");
-            fut.get(2, TimeUnit.SECONDS);
+            fut.get(1, TimeUnit.SECONDS);
 
-            int i = 0;
-            do
-            {
-                fut = session.getRemote().sendStringByFuture("api|get_users|" + i * 100 + "|100");
-                fut.get(1, TimeUnit.SECONDS);
-            }
-            while (100 * i++ <= totalUsers);
-
+            fut = session.getRemote().sendStringByFuture("api|get_users_count");
+            fut.get(1, TimeUnit.SECONDS);
         }
         catch (Throwable t)
         {
@@ -82,24 +64,18 @@ public class GetUsersSocket
     public void onMessage(String msg)
     {
         Gson gson = new Gson();
-        try
+        DeepbotBaseReponse deepbotResponse = gson.fromJson(msg, DeepbotBaseReponse.class);
+        if (!deepbotResponse.getMessage().equals("success"))
         {
-            DeepbotBaseReponse deepbotResponse = gson.fromJson(msg, DeepbotBaseReponse.class);
-            if (deepbotResponse.getMessage().toLowerCase().contains("empty"))
+            try
             {
-                //We are done at this point, stop blocking
-                System.out.println(msg);
+                totalUsers = Integer.parseInt(deepbotResponse.getMessage());
                 session.close();
                 closeLatch.countDown();
             }
-        }
-        catch (JsonSyntaxException e)
-        {
-            //This is a user object and not a registration object.
-            User[] users = gson.fromJson(msg, DeepBotUserResponse.class).getUsers();
-            for (User user : users)
+            catch (Exception e)
             {
-                userList.add(user);
+                e.printStackTrace();
             }
         }
     }
@@ -110,8 +86,8 @@ public class GetUsersSocket
         error.printStackTrace();
     }
 
-    public List<User> getUserList()
+    public int getUserCount()
     {
-        return this.userList;
+        return totalUsers;
     }
 }
