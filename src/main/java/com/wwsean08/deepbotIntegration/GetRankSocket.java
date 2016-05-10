@@ -19,12 +19,14 @@ public class GetRankSocket
     private final CountDownLatch closeLatch;
 
     private Session session;
-    private User user;
+    private final User user;
+    private final String apiKey;
 
-    public GetRankSocket(User user)
+    public GetRankSocket(User user, String apiKey)
     {
         this.closeLatch = new CountDownLatch(1);
         this.user = user;
+        this.apiKey = apiKey;
     }
 
     public boolean awaitClose(int duration, TimeUnit unit) throws InterruptedException
@@ -48,7 +50,7 @@ public class GetRankSocket
         try
         {
             Future<Void> fut;
-            fut = session.getRemote().sendStringByFuture("api|register|7C8A5OPLHDAaISRCVeMRcAPRFPXLBAJULRfCJ");
+            fut = session.getRemote().sendStringByFuture("api|register|" + apiKey);
             fut.get(2, TimeUnit.SECONDS);
 
             fut = session.getRemote().sendStringByFuture("api|get_rank|" + user.getUser());

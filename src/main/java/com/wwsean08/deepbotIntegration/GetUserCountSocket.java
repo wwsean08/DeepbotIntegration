@@ -19,12 +19,15 @@ public class GetUserCountSocket
 
     private int totalUsers = -1;
 
+    private final String apiKey;
+
     @SuppressWarnings("unused")
     private Session session;
 
-    public GetUserCountSocket()
+    public GetUserCountSocket(String apiKey)
     {
         this.closeLatch = new CountDownLatch(1);
+        this.apiKey = apiKey;
     }
 
     public boolean awaitClose(int duration, TimeUnit unit) throws InterruptedException
@@ -48,7 +51,7 @@ public class GetUserCountSocket
         try
         {
             Future<Void> fut;
-            fut = session.getRemote().sendStringByFuture("api|register|7C8A5OPLHDAaISRCVeMRcAPRFPXLBAJULRfCJ");
+            fut = session.getRemote().sendStringByFuture("api|register|" + apiKey);
             fut.get(1, TimeUnit.SECONDS);
 
             fut = session.getRemote().sendStringByFuture("api|get_users_count");

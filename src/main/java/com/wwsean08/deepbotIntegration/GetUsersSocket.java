@@ -23,20 +23,20 @@ public class GetUsersSocket
 
     private final CountDownLatch closeLatch;
 
-    private boolean endLoop = false;
-
     private final List<User> userList;
 
     private final int totalUsers;
 
-    @SuppressWarnings("unused")
     private Session session;
 
-    public GetUsersSocket(int totalUsers)
+    private final String apiKey;
+
+    public GetUsersSocket(int totalUsers, String apiKey)
     {
         this.closeLatch = new CountDownLatch(1);
         this.userList = new ArrayList<>();
         this.totalUsers = totalUsers;
+        this.apiKey = apiKey;
     }
 
     public boolean awaitClose(int duration, TimeUnit unit) throws InterruptedException
@@ -60,7 +60,7 @@ public class GetUsersSocket
         try
         {
             Future<Void> fut;
-            fut = session.getRemote().sendStringByFuture("api|register|7C8A5OPLHDAaISRCVeMRcAPRFPXLBAJULRfCJ");
+            fut = session.getRemote().sendStringByFuture("api|register|" + apiKey);
             fut.get(2, TimeUnit.SECONDS);
 
             int i = 0;
@@ -87,7 +87,7 @@ public class GetUsersSocket
             DeepbotBaseReponse deepbotResponse = gson.fromJson(msg, DeepbotBaseReponse.class);
             if (deepbotResponse.getMessage().toLowerCase().contains("empty"))
             {
-                //We are done at this point, stop blocking
+                //We are done at this point, stop blocking (assumes that we get these messages in the right order)
                 System.out.println(msg);
                 session.close();
                 closeLatch.countDown();
